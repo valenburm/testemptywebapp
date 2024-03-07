@@ -23,7 +23,6 @@ env:
   AZURE_WEBAPP_NAME: bvm-testwa001    # set this to the name of your Azure Web App
   AZURE_WEBAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
   DOTNET_VERSION: '8'                 # set this to the .NET Core version to use
-  DOTNET_ROOT: package-twa001
 
 on:
   push:
@@ -45,25 +44,20 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Set up dependency caching for faster builds
-        uses: actions/cache@v3
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+      - name: Install dependencies
+        run: dotnet restore ${{github.workspace}}/WebApplication1/WebApplication1.csproj
 
       - name: Build with dotnet
-        run: dotnet build ${{github.workspace}}/WebApplication1/WebApplication1.csproj --configuration Release
+        run: dotnet build ${{github.workspace}}/WebApplication1/WebApplication1.csproj --configuration Release --no-restore
 
       - name: dotnet publish
-        run: dotnet publish ${{github.workspace}}/WebApplication1/WebApplication1.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish ${{github.workspace}}/WebApplication1/WebApplication1.csproj -c Release -o package-twa001
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v3
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: package-twa001
 
   deploy:
     permissions:
@@ -86,4 +80,5 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ${{env.AZURE_WEBAPP_PACKAGE_PATH}}/${{env.DOTNET_ROOT}}/myapp
+          package: ./package-twa001
+
